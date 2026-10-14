@@ -2,44 +2,42 @@ import time
 
 import numpy as np
 
-from hand_controller import HandController
+from hand_hardware_interface import ACTUATOR_STOP_VELOCITY, HandHardwareInterface
 import viser
 
 from utils import print_sensor_bars
 
-# class HandController:
 
-#     def __init__(self, p_gain: float):
-#         self.p_gain = p_gain
+class HandController:
 
-#     def update(self, state):
-#         self.state = state
+    def __init__(self, p_gain: float):
+        self.p_gain = p_gain
 
-#     def get_input(self, goal_state):
-#         delta_x = goal_state - self.state
-#         return self.p_gain * delta_x
+    def update(self, state):
+        self.state = state
 
-
-SERVO_OFF = 335
+    def get_input(self, goal_state):
+        delta_x = goal_state - self.state
+        return self.p_gain * delta_x
 
 
-def server(hand):
+def server(hand: HandHardwareInterface, controller: HandController):
 
     server = viser.ViserServer()
 
     button_groups = []
 
-    # option -> (level, duration)
+    # option -> (velocity, duration)
 
-    SERVO_MOVE_SMALL = 20
-    SERVO_MOVE_LARGE = 50
+    SERVO_VELOCITY_SMALL = 20
+    SERVO_VELOCITY_LARGE = 50
     SERVO_SMALL_MOVE_SECONDS = 0.05
     SERVO_LARGE_MOVE_SECONDS = 0.1
     manual_moves = {
-        "--": (SERVO_OFF - SERVO_MOVE_LARGE, SERVO_LARGE_MOVE_SECONDS),
-        "-": (SERVO_OFF - SERVO_MOVE_SMALL, SERVO_SMALL_MOVE_SECONDS),
-        "+": (SERVO_OFF + SERVO_MOVE_SMALL, SERVO_SMALL_MOVE_SECONDS),
-        "++": (SERVO_OFF + SERVO_MOVE_LARGE, SERVO_LARGE_MOVE_SECONDS),
+        "--": (ACTUATOR_STOP_VELOCITY - SERVO_VELOCITY_LARGE, SERVO_LARGE_MOVE_SECONDS),
+        "-": (ACTUATOR_STOP_VELOCITY - SERVO_VELOCITY_SMALL, SERVO_SMALL_MOVE_SECONDS),
+        "+": (ACTUATOR_STOP_VELOCITY + SERVO_VELOCITY_SMALL, SERVO_SMALL_MOVE_SECONDS),
+        "++": (ACTUATOR_STOP_VELOCITY + SERVO_VELOCITY_LARGE, SERVO_LARGE_MOVE_SECONDS),
     }
 
     with server.gui.add_folder("Manual controls"):
@@ -53,9 +51,9 @@ def server(hand):
 
             @button_group.on_click
             def _(event, index=i):
-                level, duration = manual_moves[event.target.value]
+                velocity, duration = manual_moves[event.target.value]
                 try:
-                    hand.manually_move_actuator(index, level, duration)
+                    hand.manually_move_actuator(index, velocity, duration)
                 except RuntimeError as e:
                     print(e)
 
@@ -65,14 +63,18 @@ def server(hand):
         received_count = hand.received_count
         if received_count != last_received_count:
             last_received_count = received_count
-            print_sensor_bars(hand.sensors, max_value=1023)
+            print_sensor_bars(hand.sensor_values, max_value=1023)
         time.sleep(0.05)
 
 
 if __name__ == "__main__":
 
-    with HandController(initial_actuator_value=SERVO_OFF) as hand:
-        server(hand)
+    controller = HandController(
+        p_gain=0.1,
+    )
+
+    with HandHardwareInterface(initial_actuator_velocity=ACTUATOR_STOP_VELOCITY) as hand:
+        server(hand, controller)
 
 
 """
