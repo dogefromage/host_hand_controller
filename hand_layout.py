@@ -44,8 +44,8 @@ JOINT_POSITION_SENSOR_INDEX = {
     Joint.MIDDLE_B: 9,
     Joint.RING_A: 16,
     Joint.RING_B: 21,
-    Joint.PINKY_A: None,
-    Joint.PINKY_B: 22,  # sensor 17 was also labeled 5/B
+    Joint.PINKY_A: 17,
+    Joint.PINKY_B: 22,
     Joint.WRIST_SWIVEL: 19,
     Joint.WRIST_FLEX: 23,
 }
